@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package user.enums;
 
-option go_package = "github.com/rishu/microservice/api/user";
+option go_package = "api/user";
 
 enum UserType {
   USER_TYPE_UNSPECIFIED = 0;
