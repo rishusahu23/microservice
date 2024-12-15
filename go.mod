@@ -6,6 +6,7 @@ require (
 	github.com/knadh/koanf v1.5.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pkg/errors v0.9.1
+	google.golang.org/protobuf v1.35.2
 )
 
 require (
