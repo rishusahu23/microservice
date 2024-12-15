@@ -20,7 +20,6 @@ const (
 )
 
 var (
-	// DefaultUnmarshallingConfig to keep viper and koanf unmarshalling on same page
 	DefaultUnmarshallingConfig = func(o interface{}) koanf.UnmarshalConf {
 		return koanf.UnmarshalConf{
 			DecoderConfig: &mapstructure.DecoderConfig{

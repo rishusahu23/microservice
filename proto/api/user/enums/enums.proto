@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package user.enums;
+
+option go_package = "github.com/rishu/microservice/api/user";
+
+enum UserType {
+  USER_TYPE_UNSPECIFIED = 0;
+  USER_TYPE_MERCHANT = 1;
+  USER_TYPE_CUSTOMER = 2;
+}
