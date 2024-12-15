@@ -8,3 +8,8 @@ MongoConfig:
   MongoMinPoolSize: 1              # Minimum connections to keep in the pool
   MongoPassword: "test_password"   # Password for authentication (if needed)
   MongoPort: 27017                 # Port for MongoDB (default is 27017)
+
+Server:
+  Port: 8150
+  GrpcPort: 9090
+  GrpcHttpPort: 9091

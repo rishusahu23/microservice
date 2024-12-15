@@ -42,6 +42,13 @@ func loadConfig() (*Config, error) {
 
 type Config struct {
 	MongoConfig *MongoConfig
+	Server      *Server
+}
+
+type Server struct {
+	Port         int
+	GrpcPort     int
+	GrpcHttpPort int
 }
 
 type MongoConfig struct {

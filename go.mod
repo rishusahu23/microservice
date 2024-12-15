@@ -3,6 +3,9 @@ module github.com/rishu/microservice
 go 1.23.2
 
 require (
+	github.com/google/uuid v1.6.0
+	github.com/google/wire v0.6.0
+	github.com/gorilla/mux v1.8.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.0
 	github.com/knadh/koanf v1.5.0
 	github.com/mitchellh/mapstructure v1.5.0
