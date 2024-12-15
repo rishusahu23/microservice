@@ -37,7 +37,7 @@ func (u *UserDaoMongo) Get(ctx context.Context, userId string) (*user.User, erro
 	filter := bson.M{
 		"user_id": userId,
 	}
-	if err := u.collection.FindOne(ctx, filter).Decode(userModel); err != nil {
+	if err := u.collection.FindOne(ctx, filter).Decode(&userModel); err != nil {
 		fmt.Println(err)
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, customerrors.ErrRecordNotFound
@@ -51,7 +51,7 @@ func (u *UserDaoMongo) Create(ctx context.Context, user *user.User) error {
 	userModel := model.ConvertToModel(user)
 	userModel.PrepareForInsert()
 
-	if _, err := u.collection.InsertOne(ctx, user); err != nil {
+	if _, err := u.collection.InsertOne(ctx, userModel); err != nil {
 		return err
 	}
 	return nil

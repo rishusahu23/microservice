@@ -36,6 +36,7 @@ message GetUserResponse {
     INTERNAL = 13;
   }
   rpc.Status status = 1;
+  User user = 2;
 }
 
 message CreateUserRequest {
