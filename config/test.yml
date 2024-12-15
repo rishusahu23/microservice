@@ -1,0 +1,10 @@
+MongoConfig:
+  MongoConnectTimeoutMS: 5000ms    # Connection timeout in milliseconds
+  MongoDBName: "test_database"     # Name of the database for testing
+  MongoDBURI: "mongodb://localhost:27017"  # MongoDB URI for local testing
+  MongoHost: "localhost"           # MongoDB host (used if URI is not set)
+  MongoMaxIdleTimeMS: 10000ms      # Max idle time for a connection in the pool
+  MongoMaxPoolSize: 10             # Maximum connections in the pool
+  MongoMinPoolSize: 1              # Minimum connections to keep in the pool
+  MongoPassword: "test_password"   # Password for authentication (if needed)
+  MongoPort: 27017                 # Port for MongoDB (default is 27017)
