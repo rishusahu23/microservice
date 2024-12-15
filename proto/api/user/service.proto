@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/rishu/microservice/gen/api/user";
+
+import "api/rpc/status.proto";
+import "api/user/user.proto";
+import "google/api/annotations.proto";
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {
+    option(google.api.http) = {
+      post: "/api/v1/get-user"
+      body: "*"
+    };
+  };
+
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {
+    option(google.api.http) = {
+      post: "/api/v1/create-user"
+      body: "*"
+    };
+  };
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  enum Status {
+    OK = 0;
+    INVALID_ARGUMENT = 3;
+    NO_RECORD_FOUND = 5;
+    INTERNAL = 13;
+  }
+  rpc.Status status = 1;
+}
+
+message CreateUserRequest {
+  user.User user = 1;
+}
+
+message CreateUserResponse {
+  enum Status {
+    OK = 0;
+    INVALID_ARGUMENT = 3;
+    NO_RECORD_FOUND = 5;
+    INTERNAL = 13;
+  }
+  rpc.Status status = 1;
+}
