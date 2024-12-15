@@ -23,8 +23,12 @@ func startGrpcServer(ctx context.Context, conf *config.Config) {
 		log.Fatalf("failed to listen on port %v: %v", conf.Server.GrpcPort, err)
 	}
 
+	opts := []grpc.ServerOption{
+		grpc.MaxRecvMsgSize(1024 * 1024 * 100), // Max receive message size (100 MB)
+		grpc.MaxSendMsgSize(1024 * 1024 * 100), // Max send message size (100 MB)
+	}
 	// Create the gRPC server
-	s := grpc.NewServer()
+	s := grpc.NewServer(opts...)
 	mongoClient := mongo.GetMongoClient(ctx, conf)
 	userPb.RegisterUserServiceServer(s, wire.InitialiseUserService(conf, mongoClient))
 

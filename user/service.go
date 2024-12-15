@@ -31,6 +31,7 @@ func (s *Service) GetUser(ctx context.Context, req *userPb.GetUserRequest) (*use
 	}
 	return &userPb.GetUserResponse{
 		Status: rpc.StatusOk(),
+		User:   user,
 	}, nil
 }
 
