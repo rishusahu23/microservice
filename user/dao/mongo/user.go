@@ -2,6 +2,8 @@ package mongo
 
 import (
 	"context"
+	"fmt"
+	"github.com/google/wire"
 	"github.com/pkg/errors"
 	"github.com/rishu/microservice/config"
 	"github.com/rishu/microservice/gen/api/user"
@@ -17,9 +19,14 @@ type UserDaoMongo struct {
 	conf       *config.Config
 }
 
+var (
+	UserDaoWireSet = wire.NewSet(NewUserDaoMongo, wire.Bind(new(dao.UserDao), new(*UserDaoMongo)))
+)
+
 func NewUserDaoMongo(client *mongo.Client, conf *config.Config) *UserDaoMongo {
 	return &UserDaoMongo{
 		collection: client.Database(conf.MongoConfig.MongoDBName).Collection(model.UserCollectionName),
+		conf:       conf,
 	}
 }
 
@@ -31,6 +38,7 @@ func (u *UserDaoMongo) Get(ctx context.Context, userId string) (*user.User, erro
 		"user_id": userId,
 	}
 	if err := u.collection.FindOne(ctx, filter).Decode(userModel); err != nil {
+		fmt.Println(err)
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, customerrors.ErrRecordNotFound
 		}

@@ -6,7 +6,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	config "github.com/rishu/microservice/config"
-	"github.com/rishu/microservice/gen/api/user"
+	userPb "github.com/rishu/microservice/gen/api/user"
+	"github.com/rishu/microservice/pkg/db/mongo"
+	"github.com/rishu/microservice/user/wire"
 	"google.golang.org/grpc"
 	"log"
 	"net"
@@ -14,7 +16,7 @@ import (
 )
 
 // gRPC server setup
-func startGrpcServer(conf *config.Config) {
+func startGrpcServer(ctx context.Context, conf *config.Config) {
 	// Listen on the gRPC port (9090)
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", conf.Server.GrpcPort))
 	if err != nil {
@@ -23,8 +25,8 @@ func startGrpcServer(conf *config.Config) {
 
 	// Create the gRPC server
 	s := grpc.NewServer()
-	// Register your gRPC services here
-	// Example: pb.RegisterMyServiceServer(s, &MyServiceServer{})
+	mongoClient := mongo.GetMongoClient(ctx, conf)
+	userPb.RegisterUserServiceServer(s, wire.InitialiseUserService(conf, mongoClient))
 
 	log.Printf("Starting gRPC server on :%v", conf.Server.GrpcPort)
 	if err := s.Serve(lis); err != nil {
@@ -55,7 +57,7 @@ func startGrpcHttpServer(conf *config.Config) {
 	opts := []grpc.DialOption{grpc.WithInsecure()} // gRPC dial options for the gateway
 
 	// Register the gRPC service to the HTTP reverse proxy
-	err := user.RegisterUserServiceHandlerFromEndpoint(ctx, mux, fmt.Sprintf(":%v", conf.Server.GrpcPort), opts)
+	err := userPb.RegisterUserServiceHandlerFromEndpoint(ctx, mux, fmt.Sprintf(":%v", conf.Server.GrpcPort), opts)
 	if err != nil {
 		log.Fatalf("failed to register service handler: %v", err)
 	}
@@ -73,12 +75,13 @@ func startGrpcHttpServer(conf *config.Config) {
 }
 
 func main() {
+	ctx := context.Background()
 	conf, err := config.Load()
 	if err != nil {
 		panic(err)
 	}
 	// Start gRPC server in a separate goroutine
-	go startGrpcServer(conf)
+	go startGrpcServer(ctx, conf)
 
 	// Start HTTP server in the main goroutine
 	go startHttpServer(conf)
