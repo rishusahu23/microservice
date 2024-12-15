@@ -2,14 +2,16 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	config "github.com/rishu/microservice/config"
+	"github.com/rishu/microservice/config"
 	userPb "github.com/rishu/microservice/gen/api/user"
 	"github.com/rishu/microservice/pkg/db/mongo"
 	"github.com/rishu/microservice/user/wire"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"log"
 	"net"
 	"net/http"
@@ -69,7 +71,7 @@ func startGrpcHttpServer(conf *config.Config) {
 	// Start the HTTP server (HTTP/REST interface)
 	httpServer := &http.Server{
 		Addr:    fmt.Sprintf(":%v", conf.Server.GrpcHttpPort), // HTTP port for gRPC over HTTP
-		Handler: mux,                                          // HTTP server uses the reverse proxy
+		Handler: grpcGatewayMiddleware(mux),                   // HTTP server uses the reverse proxy
 	}
 
 	log.Printf("Starting gRPC over HTTP server on :9091")
@@ -95,4 +97,70 @@ func main() {
 
 	// Block main goroutine indefinitely (this will keep the servers running)
 	select {}
+}
+
+func statusToHTTPCode(statusCode codes.Code) int {
+	// Map custom gRPC status code to HTTP status code
+	switch statusCode {
+	case codes.OK:
+		return http.StatusOK
+	case codes.InvalidArgument:
+		return http.StatusBadRequest
+	case codes.NotFound:
+		return http.StatusNotFound
+	case codes.Internal:
+		return http.StatusInternalServerError
+	default:
+		return http.StatusInternalServerError
+	}
+}
+
+// Response structure to match gRPC response format
+type GrpcResponse struct {
+	Status struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	} `json:"status"`
+	User interface{} `json:"user"` // Assuming `user` is dynamic
+}
+
+// Middleware for extracting status code from the gRPC response
+func grpcGatewayMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Capture the original response using a response recorder
+		rec := &responseRecorder{ResponseWriter: w, body: make([]byte, 0)}
+
+		// Call the next handler (gRPC-Gateway handler)
+		next.ServeHTTP(rec, r)
+
+		// Parse the captured response body
+		var grpcResponse GrpcResponse
+		if err := json.Unmarshal(rec.body, &grpcResponse); err != nil {
+			log.Printf("Failed to parse response body: %v", err)
+			// Fall back to internal server error if parsing fails
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		// Map gRPC status code to HTTP status code
+		httpStatusCode := statusToHTTPCode(codes.Code(grpcResponse.Status.Code))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(httpStatusCode) // Set the correct HTTP status code
+		_, err := w.Write(rec.body)   // Write the original body
+		if err != nil {
+			log.Printf("Failed to write response: %v", err)
+		}
+	})
+}
+
+// Custom response recorder to capture the response body
+type responseRecorder struct {
+	http.ResponseWriter
+	body []byte
+}
+
+func (r *responseRecorder) Write(p []byte) (n int, err error) {
+	// Append response body to the recorder's body field
+	r.body = append(r.body, p...)
+	return len(p), nil
 }
