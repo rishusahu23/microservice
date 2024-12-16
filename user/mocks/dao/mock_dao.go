@@ -10,6 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	user "github.com/rishu/microservice/gen/api/user"
+	filters "github.com/rishu/microservice/pkg/filters"
 )
 
 // MockUserDao is a mock of UserDao interface.
@@ -50,18 +51,23 @@ func (mr *MockUserDaoMockRecorder) Create(ctx, user interface{}) *gomock.Call {
 }
 
 // Get mocks base method.
-func (m *MockUserDao) Get(ctx context.Context, userId string) (*user.User, error) {
+func (m *MockUserDao) Get(ctx context.Context, filters ...filters.FilterOption) (*user.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, userId)
+	varargs := []interface{}{ctx}
+	for _, a := range filters {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Get", varargs...)
 	ret0, _ := ret[0].(*user.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockUserDaoMockRecorder) Get(ctx, userId interface{}) *gomock.Call {
+func (mr *MockUserDaoMockRecorder) Get(ctx interface{}, filters ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockUserDao)(nil).Get), ctx, userId)
+	varargs := append([]interface{}{ctx}, filters...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockUserDao)(nil).Get), varargs...)
 }
 
 // Update mocks base method.

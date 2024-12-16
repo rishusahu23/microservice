@@ -8,6 +8,7 @@ import (
 	"github.com/rishu/microservice/config"
 	"github.com/rishu/microservice/gen/api/user"
 	customerrors "github.com/rishu/microservice/pkg/errors"
+	"github.com/rishu/microservice/pkg/filters"
 	"github.com/rishu/microservice/user/dao"
 	model "github.com/rishu/microservice/user/dao/models/mongo"
 	"go.mongodb.org/mongo-driver/bson"
@@ -32,10 +33,11 @@ func NewUserDaoMongo(client *mongo.Client, conf *config.Config) *UserDaoMongo {
 
 var _ dao.UserDao = &UserDaoMongo{}
 
-func (u *UserDaoMongo) Get(ctx context.Context, userId string) (*user.User, error) {
+func (u *UserDaoMongo) Get(ctx context.Context, options ...filters.FilterOption) (*user.User, error) {
 	var userModel *model.User
-	filter := bson.M{
-		"user_id": userId,
+	filter := bson.M{}
+	for _, option := range options {
+		filter = option.Apply(filter)
 	}
 	if err := u.collection.FindOne(ctx, filter).Decode(&userModel); err != nil {
 		fmt.Println(err)
@@ -58,11 +60,5 @@ func (u *UserDaoMongo) Create(ctx context.Context, user *user.User) error {
 }
 
 func (u *UserDaoMongo) Update(ctx context.Context, user *user.User) error {
-	userModel := model.ConvertToModel(user)
-	userModel.PrepareForInsert()
-
-	if _, err := u.collection.InsertOne(ctx, user); err != nil {
-		return err
-	}
 	return nil
 }

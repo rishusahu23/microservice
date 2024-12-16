@@ -9,6 +9,7 @@ import (
 	userPb "github.com/rishu/microservice/gen/api/user"
 	customerrors "github.com/rishu/microservice/pkg/errors"
 	"github.com/rishu/microservice/user/dao"
+	"github.com/rishu/microservice/user/dao/mongo"
 )
 
 type Service struct {
@@ -17,7 +18,7 @@ type Service struct {
 }
 
 func (s *Service) GetUser(ctx context.Context, req *userPb.GetUserRequest) (*userPb.GetUserResponse, error) {
-	user, err := s.dao.Get(ctx, req.GetUserId())
+	user, err := s.dao.Get(ctx, mongo.WithUserId(req.GetUserId()))
 	fmt.Println(user)
 	if err != nil {
 		if errors.Is(err, customerrors.ErrRecordNotFound) {
