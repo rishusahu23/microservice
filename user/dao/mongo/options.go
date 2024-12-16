@@ -15,3 +15,14 @@ func WithUserId(userId string) filters.FilterOption {
 		return filter
 	})
 }
+
+func WithEmail(email string) filters.FilterOption {
+	return filters.NewFuncMongoFilterOption(func(filter bson.M) bson.M {
+		if email == "" {
+			return filter
+		}
+		// Add the applicationId filter
+		filter["email"] = email
+		return filter
+	})
+}

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	pkgConfig "github.com/rishu/microservice/pkg/config"
+	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -12,6 +14,8 @@ var (
 	once   sync.Once
 	config *Config
 	err    error
+
+	_, b, _, _ = runtime.Caller(0)
 )
 
 func Load() (*Config, error) {
@@ -24,11 +28,17 @@ func Load() (*Config, error) {
 	return config, err
 }
 
+func TestConfigDir() string {
+	configPath := filepath.Join(b, "..")
+	return configPath
+}
+
 func loadConfig() (*Config, error) {
 
 	conf := &Config{}
+	testConfigDir := TestConfigDir()
 	// loads config from file
-	k, _, err := pkgConfig.LoadConfig("test")
+	k, _, err := pkgConfig.LoadConfig(testConfigDir, "test")
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}

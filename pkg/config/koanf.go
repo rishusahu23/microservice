@@ -35,8 +35,8 @@ var (
 	}
 )
 
-func LoadConfig(fileName string) (*koanf.Koanf, *string, error) {
-	configDir, _ := GetConfigDir()
+func LoadConfig(testConfigDir, fileName string) (*koanf.Koanf, *string, error) {
+	configDir, _ := GetConfigDir(testConfigDir)
 	k, err := PopulateConfig(configDir, fileName)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "PopulateConfig failed")
@@ -71,7 +71,12 @@ func populateConfigFromFiles(configPath string) (*koanf.Koanf, error) {
 	return k, nil
 }
 
-func GetConfigDir() (string, error) {
+func GetConfigDir(testConfigDir string) (string, error) {
+	env, _ := os.LookupEnv("ENV")
+	if env == "test" {
+		return testConfigDir, nil
+	}
+
 	configDir, ok := os.LookupEnv("CONFIG_DIR")
 	if !ok {
 		currDir, err := os.Getwd()
