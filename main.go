@@ -10,6 +10,7 @@ import (
 	userPb "github.com/rishu/microservice/gen/api/user"
 	"github.com/rishu/microservice/pkg/db/mongo"
 	"github.com/rishu/microservice/user/wire"
+	"github.com/soheilhy/cmux"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"log"
@@ -17,26 +18,74 @@ import (
 	"net/http"
 )
 
-// gRPC server setup
-func startGrpcServer(ctx context.Context, conf *config.Config) {
-	// Listen on the gRPC port (9090)
+// Combined gRPC and HTTP server using cmux
+func startCombinedServer(ctx context.Context, conf *config.Config) {
+	// Create a listener for the shared port
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", conf.Server.GrpcPort))
 	if err != nil {
 		log.Fatalf("failed to listen on port %v: %v", conf.Server.GrpcPort, err)
 	}
 
+	// Create a cmux instance
+	m := cmux.New(lis)
+
+	// Match connections for gRPC
+	grpcL := m.MatchWithWriters(cmux.HTTP2MatchHeaderFieldSendSettings("content-type", "application/grpc"))
+
+	// Match connections for HTTP (gRPC-Gateway and custom HTTP)
+	httpL := m.Match(cmux.Any())
+
+	// Start gRPC server
+	go func() {
+		startGrpcServer(ctx, grpcL, conf)
+	}()
+
+	// Start HTTP server
+	go func() {
+		startGrpcHttpServer(ctx, httpL, conf)
+	}()
+
+	// Start cmux serving
+	log.Printf("Starting combined gRPC and HTTP server on :%v", conf.Server.GrpcPort)
+	if err := m.Serve(); err != nil {
+		log.Fatalf("cmux server error: %v", err)
+	}
+}
+
+// gRPC server setup
+func startGrpcServer(ctx context.Context, lis net.Listener, conf *config.Config) {
 	opts := []grpc.ServerOption{
 		grpc.MaxRecvMsgSize(1024 * 1024 * 100), // Max receive message size (100 MB)
 		grpc.MaxSendMsgSize(1024 * 1024 * 100), // Max send message size (100 MB)
 	}
-	// Create the gRPC server
+
 	s := grpc.NewServer(opts...)
 	mongoClient := mongo.GetMongoClient(ctx, conf)
 	userPb.RegisterUserServiceServer(s, wire.InitialiseUserService(conf, mongoClient))
 
-	log.Printf("Starting gRPC server on :%v", conf.Server.GrpcPort)
+	log.Printf("gRPC server running")
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve gRPC server: %v", err)
+	}
+}
+
+// gRPC-Gateway server setup
+func startGrpcHttpServer(ctx context.Context, lis net.Listener, conf *config.Config) {
+	mux := runtime.NewServeMux()
+	opts := []grpc.DialOption{grpc.WithInsecure()}
+
+	err := userPb.RegisterUserServiceHandlerFromEndpoint(ctx, mux, fmt.Sprintf(":%v", conf.Server.GrpcPort), opts)
+	if err != nil {
+		log.Fatalf("failed to register service handler: %v", err)
+	}
+
+	httpServer := &http.Server{
+		Handler: mux, // Use the mux directly
+	}
+
+	log.Printf("HTTP server running")
+	if err := httpServer.Serve(lis); err != nil {
+		log.Fatalf("failed to serve HTTP server: %v", err)
 	}
 }
 
@@ -55,31 +104,6 @@ func startHttpServer(conf *config.Config) {
 	}
 }
 
-// gRPC-over-HTTP (optional, for gRPC-gateway)
-func startGrpcHttpServer(conf *config.Config) {
-	// Create a reverse proxy for gRPC-Gateway
-	ctx := context.Background()
-	mux := runtime.NewServeMux()
-	opts := []grpc.DialOption{grpc.WithInsecure()} // gRPC dial options for the gateway
-
-	// Register the gRPC service to the HTTP reverse proxy
-	err := userPb.RegisterUserServiceHandlerFromEndpoint(ctx, mux, fmt.Sprintf(":%v", conf.Server.GrpcPort), opts)
-	if err != nil {
-		log.Fatalf("failed to register service handler: %v", err)
-	}
-
-	// Start the HTTP server (HTTP/REST interface)
-	httpServer := &http.Server{
-		Addr:    fmt.Sprintf(":%v", conf.Server.GrpcHttpPort), // HTTP port for gRPC over HTTP
-		Handler: grpcGatewayMiddleware(mux),                   // HTTP server uses the reverse proxy
-	}
-
-	log.Printf("Starting gRPC over HTTP server on :9091")
-	if err := httpServer.ListenAndServe(); err != nil {
-		log.Fatalf("failed to start HTTP server: %v", err)
-	}
-}
-
 func main() {
 	ctx := context.Background()
 	conf, err := config.Load()
@@ -87,13 +111,16 @@ func main() {
 		panic(err)
 	}
 	// Start gRPC server in a separate goroutine
-	go startGrpcServer(ctx, conf)
+	//go startGrpcServer(ctx, conf)
 
 	// Start HTTP server in the main goroutine
 	go startHttpServer(conf)
 
 	// Optionally, start gRPC-over-HTTP (requires grpc-gateway setup)
-	go startGrpcHttpServer(conf)
+	//go startGrpcHttpServer(conf)
+
+	// Start combined gRPC and HTTP server
+	startCombinedServer(ctx, conf)
 
 	// Block main goroutine indefinitely (this will keep the servers running)
 	select {}

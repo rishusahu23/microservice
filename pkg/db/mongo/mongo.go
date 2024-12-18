@@ -10,13 +10,11 @@ import (
 )
 
 func GetMongoClient(ctx context.Context, conf *config.Config) *mongo.Client {
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	readPref, err := readpref.New(readpref.SecondaryPreferredMode, readpref.WithMaxStaleness(time.Second))
-	if err != nil {
-		panic(err)
-	}
+	readPref := readpref.Primary()
+
 	clientOptions := options.Client().
 		ApplyURI(conf.MongoConfig.MongoDBURI).
 		SetReadPreference(readPref)
