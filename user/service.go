@@ -3,17 +3,19 @@ package user
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/rishu/microservice/gen/api/rpc"
 	userPb "github.com/rishu/microservice/gen/api/user"
 	customerrors "github.com/rishu/microservice/pkg/errors"
+	txn "github.com/rishu/microservice/pkg/transaction"
 	"github.com/rishu/microservice/user/dao"
 	"github.com/rishu/microservice/user/dao/mongo"
+	mongo2 "go.mongodb.org/mongo-driver/mongo"
 )
 
 type Service struct {
-	dao dao.UserDao
+	dao        dao.UserDao
+	txnManager txn.TransactionManager
 	userPb.UnimplementedUserServiceServer
 }
 
@@ -37,8 +39,18 @@ func (s *Service) GetUser(ctx context.Context, req *userPb.GetUserRequest) (*use
 }
 
 func (s *Service) CreateUser(ctx context.Context, req *userPb.CreateUserRequest) (*userPb.CreateUserResponse, error) {
-	req.User.Id = uuid.NewString()
-	if err := s.dao.Create(ctx, req.User); err != nil {
+
+	err := s.txnManager.RunInTxn(ctx, func(sessCtx mongo2.SessionContext) error {
+		_, err := s.dao.Get(sessCtx, mongo.WithUserId(req.GetUser().GetId()))
+		if err != nil && !errors.Is(err, customerrors.ErrRecordNotFound) {
+			return err
+		}
+
+		// Step 3: Create user
+		return s.dao.Create(sessCtx, req.GetUser())
+	})
+
+	if err != nil {
 		return &userPb.CreateUserResponse{
 			Status: rpc.StatusInternal(""),
 		}, nil
@@ -48,9 +60,10 @@ func (s *Service) CreateUser(ctx context.Context, req *userPb.CreateUserRequest)
 	}, nil
 }
 
-func NewService(dao dao.UserDao) *Service {
+func NewService(dao dao.UserDao, txnManager txn.TransactionManager) *Service {
 	return &Service{
-		dao: dao,
+		dao:        dao,
+		txnManager: txnManager,
 	}
 }
 
