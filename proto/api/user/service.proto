@@ -6,6 +6,8 @@ option go_package = "github.com/rishu/microservice/gen/api/user";
 
 import "api/rpc/status.proto";
 import "api/user/user.proto";
+import "api/user/post.proto";
+
 import "google/api/annotations.proto";
 
 service UserService {
@@ -22,6 +24,13 @@ service UserService {
       body: "*"
     };
   };
+
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {
+    option(google.api.http) = {
+      post: "/api/v1/get-post"
+      body: "*"
+    };
+  }
 }
 
 message GetUserRequest {
@@ -51,4 +60,19 @@ message CreateUserResponse {
     INTERNAL = 13;
   }
   rpc.Status status = 1;
+}
+
+message GetPostRequest {
+  string post_id = 1;
+}
+
+message GetPostResponse {
+  enum Status {
+    OK = 0;
+    INVALID_ARGUMENT = 3;
+    NO_RECORD_FOUND = 5;
+    INTERNAL = 13;
+  }
+  rpc.Status status = 1;
+  Post post = 2;
 }
