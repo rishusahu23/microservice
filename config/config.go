@@ -51,8 +51,9 @@ func loadConfig() (*Config, error) {
 }
 
 type Config struct {
-	MongoConfig *MongoConfig
-	Server      *Server
+	MongoConfig     *MongoConfig
+	Server          *Server
+	ExternalService *ExternalService
 }
 
 type Server struct {
@@ -71,4 +72,12 @@ type MongoConfig struct {
 	MongoMinPoolSize      int
 	MongoPassword         string
 	MongoPort             int
+}
+
+type ExternalService struct {
+	JsonPlaceholder *JsonPlaceholder
+}
+
+type JsonPlaceholder struct {
+	FetchPostUrl string
 }

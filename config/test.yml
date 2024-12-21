@@ -13,3 +13,7 @@ Server:
   Port: 8150
   GrpcPort: 9090
   GrpcHttpPort: 9091
+
+ExternalService:
+  JsonPlaceholder:
+    FetchPostUrl: "https://jsonplaceholder.typicode.com/posts"

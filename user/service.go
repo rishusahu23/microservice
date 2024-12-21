@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/rishu/microservice/external/post"
 	"github.com/rishu/microservice/gen/api/rpc"
 	userPb "github.com/rishu/microservice/gen/api/user"
 	customerrors "github.com/rishu/microservice/pkg/errors"
@@ -17,6 +18,7 @@ type Service struct {
 	dao        dao.UserDao
 	txnManager txn.TransactionManager
 	userPb.UnimplementedUserServiceServer
+	postClient post.Client
 }
 
 func (s *Service) GetUser(ctx context.Context, req *userPb.GetUserRequest) (*userPb.GetUserResponse, error) {
@@ -39,7 +41,6 @@ func (s *Service) GetUser(ctx context.Context, req *userPb.GetUserRequest) (*use
 }
 
 func (s *Service) CreateUser(ctx context.Context, req *userPb.CreateUserRequest) (*userPb.CreateUserResponse, error) {
-
 	err := s.txnManager.RunInTxn(ctx, func(sessCtx mongo2.SessionContext) error {
 		_, err := s.dao.Get(sessCtx, mongo.WithUserId(req.GetUser().GetId()))
 		if err != nil && !errors.Is(err, customerrors.ErrRecordNotFound) {
@@ -60,10 +61,31 @@ func (s *Service) CreateUser(ctx context.Context, req *userPb.CreateUserRequest)
 	}, nil
 }
 
-func NewService(dao dao.UserDao, txnManager txn.TransactionManager) *Service {
+func (s *Service) GetPost(ctx context.Context, req *userPb.GetPostRequest) (*userPb.GetPostResponse, error) {
+	resp, err := s.postClient.FetchPost(ctx, &post.FetchPostRequest{
+		PostId: "1",
+	})
+	if err != nil {
+		return &userPb.GetPostResponse{
+			Status: rpc.StatusInternal(err.Error()),
+		}, nil
+	}
+	return &userPb.GetPostResponse{
+		Status: rpc.StatusOk(),
+		Post: &userPb.Post{
+			UserId: int32(resp.UserID),
+			Id:     int32(resp.ID),
+			Title:  resp.Title,
+			Body:   resp.Body,
+		},
+	}, nil
+}
+
+func NewService(dao dao.UserDao, txnManager txn.TransactionManager, postClient post.Client) *Service {
 	return &Service{
 		dao:        dao,
 		txnManager: txnManager,
+		postClient: postClient,
 	}
 }
 
