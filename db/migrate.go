@@ -72,7 +72,7 @@ func snapshotDB(dbURL, dbName string) error {
 	}
 	defer db.Close()
 
-	// Query to get the list of tables in the database
+	// Query to get the list of tables in the database (considering public schema and others)
 	rows, err := db.Query(`
 		SELECT table_schema || '.' || table_name
 		FROM information_schema.tables
@@ -101,10 +101,13 @@ func snapshotDB(dbURL, dbName string) error {
 			SELECT 'CREATE TABLE ' || table_name || E'\n(\n' ||
 			string_agg(column_name || ' ' || data_type, E',\n') || E'\n);\n'
 			FROM information_schema.columns
-			WHERE table_name = '%s'
-			GROUP BY table_name`, table)).Scan(&ddl)
+			WHERE table_schema = '%s' AND table_name = '%s'
+			GROUP BY table_name`,
+			strings.Split(table, ".")[0], strings.Split(table, ".")[1])).Scan(&ddl)
 		if err != nil {
-			return fmt.Errorf("failed to fetch schema for table %s: %v", table, err)
+			// If there's an error (table doesn't exist or some other issue), log it and continue
+			log.Printf("Skipping table %s due to error: %v\n", table, err)
+			continue
 		}
 
 		// Append the DDL to the schema builder
