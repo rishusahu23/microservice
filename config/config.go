@@ -54,6 +54,7 @@ type Config struct {
 	MongoConfig     *MongoConfig
 	Server          *Server
 	ExternalService *ExternalService
+	PostgresConfig  *PostgresConfig
 }
 
 type Server struct {
@@ -80,4 +81,13 @@ type ExternalService struct {
 
 type JsonPlaceholder struct {
 	FetchPostUrl string
+}
+
+type PostgresConfig struct {
+	Host     string
+	Port     int
+	User     string
+	Password string
+	DBName   string
+	SSLMode  string
 }

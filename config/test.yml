@@ -17,3 +17,10 @@ Server:
 ExternalService:
   JsonPlaceholder:
     FetchPostUrl: "https://jsonplaceholder.typicode.com/posts"
+
+PostgresConfig:
+  Host: "localhost"
+  Port: 5432
+  User: "root"
+  Password: "root"
+  DBName: "test_database"
