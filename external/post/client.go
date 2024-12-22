@@ -2,15 +2,16 @@ package post
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/rishu/microservice/config"
-	"github.com/rishu/microservice/external/contants"
+	"github.com/rishu/microservice/external/enums"
 	"github.com/rishu/microservice/external/ohttp"
+	"github.com/rishu/microservice/external/pkg"
+	"github.com/rishu/microservice/external/post/json_placeholder"
 )
 
 type Client interface {
-	FetchPost(ctx context.Context, req *FetchPostRequest) (*FetchPostResponse, error)
+	FetchPost(ctx context.Context, req *placeholder.FetchPostRequest) (*placeholder.FetchPostResponse, error)
 }
 
 type ClientImpl struct {
@@ -27,23 +28,22 @@ func NewPostClientImpl(httpRequestHandler *ohttp.HttpRequestHandler, conf *confi
 	}
 }
 
-func (c *ClientImpl) FetchPost(ctx context.Context, req *FetchPostRequest) (*FetchPostResponse, error) {
-	resp, err := c.httpRequestHandler.MakeHttpRequest(ctx, &ohttp.HttpRequest{
-		Url:         fmt.Sprintf("%v/%v", c.conf.ExternalService.JsonPlaceholder.FetchPostUrl, req.PostId),
-		Method:      contants.GetMethod,
-		ContentType: contants.JsonContentType,
-	})
+func (c *ClientImpl) requestFactoryMap() map[enums.Vendor]pkg.SyncRequestFactory {
+	return map[enums.Vendor]pkg.SyncRequestFactory{
+		enums.JsonPlaceholder: c.NewPlaceholderRequest,
+	}
+}
+
+func (c *ClientImpl) FetchPost(ctx context.Context, req *placeholder.FetchPostRequest) (*placeholder.FetchPostResponse, error) {
+	venReq, err := pkg.NewVendorRequest(req, c.requestFactoryMap())
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(venReq)
+	resp, err := c.httpRequestHandler.MakeHttpRequest(ctx, venReq)
 	if err != nil {
 		return nil, err
 	}
 
-	fetchPostResponse := &FetchPostResponse{}
-	err = json.Unmarshal(resp.Body, fetchPostResponse)
-	if err != nil {
-		fmt.Println(err)
-		return nil, fmt.Errorf("failed to unmarshal response body: %w", err)
-	}
-
-	// Return the parsed response
-	return fetchPostResponse, nil
+	return resp.(*placeholder.FetchPostResponse), nil
 }

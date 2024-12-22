@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/rishu/microservice/external/enums"
 	"github.com/rishu/microservice/external/post"
+	"github.com/rishu/microservice/external/post/json_placeholder"
 	"github.com/rishu/microservice/gen/api/rpc"
 	userPb "github.com/rishu/microservice/gen/api/user"
 	customerrors "github.com/rishu/microservice/pkg/errors"
@@ -62,8 +64,9 @@ func (s *Service) CreateUser(ctx context.Context, req *userPb.CreateUserRequest)
 }
 
 func (s *Service) GetPost(ctx context.Context, req *userPb.GetPostRequest) (*userPb.GetPostResponse, error) {
-	resp, err := s.postClient.FetchPost(ctx, &post.FetchPostRequest{
+	resp, err := s.postClient.FetchPost(ctx, &placeholder.FetchPostRequest{
 		PostId: "1",
+		Vendor: enums.JsonPlaceholder,
 	})
 	if err != nil {
 		return &userPb.GetPostResponse{

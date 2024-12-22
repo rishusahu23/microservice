@@ -1,39 +1,22 @@
 package ohttp
 
 import (
+	"bytes"
 	"context"
-	"crypto/tls"
+	"fmt"
+	"github.com/rishu/microservice/external/contants"
+	"github.com/rishu/microservice/external/pkg"
 	"io/ioutil"
 	"net/http"
-	"strings"
+	"net/url"
 )
 
 type IHttpRequestHandler interface {
-	MakeHttpRequest(context.Context, *HttpRequest) (*HttpResponse, error)
+	MakeHttpRequest(context.Context, pkg.SyncRequest) (interface{}, error)
 }
 
 type HttpRequestHandler struct {
 	client *http.Client
-}
-
-type HttpRequest struct {
-	Body        []byte
-	Url         string
-	Method      string
-	ContentType string
-}
-
-type HttpResponse struct {
-	Body       []byte
-	StatusCode int
-}
-
-func getHttpClient() *http.Client {
-	return &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
 }
 
 func NewHttpRequestHandler(client *http.Client) *HttpRequestHandler {
@@ -42,18 +25,25 @@ func NewHttpRequestHandler(client *http.Client) *HttpRequestHandler {
 	}
 }
 
-func (h *HttpRequestHandler) MakeHttpRequest(ctx context.Context, request *HttpRequest) (*HttpResponse, error) {
-	req, err := http.NewRequest(request.Method, request.Url, strings.NewReader(string(request.Body)))
+func (h *HttpRequestHandler) MakeHttpRequest(ctx context.Context, request pkg.SyncRequest) (interface{}, error) {
+	uri, err := url.Parse(request.GetURL())
 	if err != nil {
-		//logger.Error(ctx, "The HTTP request creation failed with error: %s\n", zap.Error(err))
+		return nil, fmt.Errorf("URL could not be parsed: %w", err)
+	}
+	reqBody, err := request.Marshal()
+	if err != nil {
 		return nil, err
+	}
+	httpReq, err := http.NewRequest(request.GetMethod(), uri.String(), bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, fmt.Errorf("error encountered creating http httpRequest: %w", err)
 	}
 
 	// Set the appropriate headers
-	req.Header.Set("Content-Type", request.ContentType)
+	httpReq.Header.Set("Content-Type", contants.JsonContentType)
 
 	// Use http.Client to send the request
-	response, err := h.client.Do(req)
+	response, err := h.client.Do(httpReq)
 	if err != nil {
 		//logger.Error(ctx, "The HTTP request failed with error: %s\n", zap.Error(err))
 		return nil, err
@@ -70,7 +60,9 @@ func (h *HttpRequestHandler) MakeHttpRequest(ctx context.Context, request *HttpR
 		return nil, err
 	}
 
-	return &HttpResponse{
-		Body: data,
-	}, nil
+	resp, err := request.GetResponse().Unmarshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }

@@ -1,4 +1,4 @@
-package post
+package placeholder
 
 type FetchPostResponse struct {
 	UserID int    `json:"userId"`
