@@ -1,7 +1,7 @@
 MongoConfig:
   MongoConnectTimeoutMS: 5000ms    # Connection timeout in milliseconds
   MongoDBName: "test_database"     # Name of the database for testing
-  MongoDBURI: "mongodb://localhost:27017"  # MongoDB URI for local testing
+  MongoDBURI: "mongodb://localhost:27017/?replicaSet=rs0" # MongoDB URI for local testing
   MongoHost: "localhost"           # MongoDB host (used if URI is not set)
   MongoMaxIdleTimeMS: 10000ms      # Max idle time for a connection in the pool
   MongoMaxPoolSize: 10             # Maximum connections in the pool
@@ -13,3 +13,7 @@ Server:
   Port: 8150
   GrpcPort: 9090
   GrpcHttpPort: 9091
+
+ExternalService:
+  JsonPlaceholder:
+    FetchPostUrl: "https://jsonplaceholder.typicode.com/posts"

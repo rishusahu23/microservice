@@ -7,16 +7,40 @@
 package wire
 
 import (
+	"crypto/tls"
 	"github.com/rishu/microservice/config"
+	"github.com/rishu/microservice/external/ohttp"
+	"github.com/rishu/microservice/external/post"
+	mongo3 "github.com/rishu/microservice/pkg/transaction/mongo"
 	"github.com/rishu/microservice/user"
 	mongo2 "github.com/rishu/microservice/user/dao/mongo"
 	"go.mongodb.org/mongo-driver/mongo"
+	"net/http"
 )
 
 // Injectors from wire.go:
 
 func InitialiseUserService(conf *config.Config, mongoClient *mongo.Client) *user.Service {
 	userDaoMongo := mongo2.NewUserDaoMongo(mongoClient, conf)
-	service := user.NewService(userDaoMongo)
+	mongoTransactionManager := mongo3.NewMongoTransactionManager(mongoClient)
+	client := getHttpClient()
+	httpRequestHandler := ohttp.NewHttpRequestHandler(client)
+	clientImpl := post.NewPostClientImpl(httpRequestHandler, conf)
+	postClient := GetPostClientProvider(clientImpl)
+	service := user.NewService(userDaoMongo, mongoTransactionManager, postClient)
 	return service
+}
+
+// wire.go:
+
+func GetPostClientProvider(provider *post.ClientImpl) post.Client {
+	return provider
+}
+
+func getHttpClient() *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
 }
