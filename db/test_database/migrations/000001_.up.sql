@@ -6,5 +6,5 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL UNIQUE,            -- Unique email address
     password_hash TEXT NOT NULL,                   -- Hashed password for security
     created_at TIMESTAMP DEFAULT NOW(),            -- Record creation timestamp
-    updated_at TIMESTAMP DEFAULT NOW()             -- Last updated timestamp
+    updated_at TIMESTAMP DEFAULT NOW(            -- Last updated timestamp
     );
