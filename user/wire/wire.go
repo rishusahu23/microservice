@@ -6,9 +6,11 @@ package wire
 import (
 	"crypto/tls"
 	"github.com/google/wire"
+	redisV9 "github.com/redis/go-redis/v9"
 	"github.com/rishu/microservice/config"
 	"github.com/rishu/microservice/external/ohttp"
 	"github.com/rishu/microservice/external/post"
+	"github.com/rishu/microservice/pkg/in_memory_store/redis"
 	mongo2 "github.com/rishu/microservice/pkg/transaction/mongo"
 	"github.com/rishu/microservice/user"
 	mongoDao "github.com/rishu/microservice/user/dao/mongo"
@@ -28,7 +30,7 @@ func getHttpClient() *http.Client {
 	}
 }
 
-func InitialiseUserService(conf *config.Config, mongoClient *mongo.Client) *user.Service {
+func InitialiseUserService(conf *config.Config, mongoClient *mongo.Client, redisClient *redisV9.Client) *user.Service {
 	wire.Build(
 		user.NewService,
 		mongoDao.UserDaoWireSet,
@@ -37,6 +39,7 @@ func InitialiseUserService(conf *config.Config, mongoClient *mongo.Client) *user
 		post.NewPostClientImpl,
 		ohttp.NewHttpRequestHandler,
 		getHttpClient,
+		redis.RedisWireSet,
 	)
 	return &user.Service{}
 }

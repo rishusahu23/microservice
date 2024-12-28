@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/rishu/microservice/external/enums"
@@ -10,17 +11,20 @@ import (
 	"github.com/rishu/microservice/gen/api/rpc"
 	userPb "github.com/rishu/microservice/gen/api/user"
 	customerrors "github.com/rishu/microservice/pkg/errors"
+	store "github.com/rishu/microservice/pkg/in_memory_store"
 	txn "github.com/rishu/microservice/pkg/transaction"
 	"github.com/rishu/microservice/user/dao"
 	"github.com/rishu/microservice/user/dao/mongo"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
+	"time"
 )
 
 type Service struct {
 	dao        dao.UserDao
 	txnManager txn.TransactionManager
 	userPb.UnimplementedUserServiceServer
-	postClient post.Client
+	postClient         post.Client
+	redisInMemoryStore store.InMemoryStore
 }
 
 func (s *Service) GetUser(ctx context.Context, req *userPb.GetUserRequest) (*userPb.GetUserResponse, error) {
@@ -63,6 +67,15 @@ func (s *Service) CreateUser(ctx context.Context, req *userPb.CreateUserRequest)
 	}, nil
 }
 
+func (s *Service) updatePostInRedis(ctx context.Context, resp *placeholder.FetchPostResponse) {
+	val, err := json.Marshal(resp)
+	if err != nil {
+		return
+	}
+	key := fmt.Sprintf("post_%v", resp.UserID)
+	_ = s.redisInMemoryStore.Set(ctx, key, string(val), 1*time.Hour)
+}
+
 func (s *Service) GetPost(ctx context.Context, req *userPb.GetPostRequest) (*userPb.GetPostResponse, error) {
 	resp, err := s.postClient.FetchPost(ctx, &placeholder.FetchPostRequest{
 		PostId: "1",
@@ -73,6 +86,7 @@ func (s *Service) GetPost(ctx context.Context, req *userPb.GetPostRequest) (*use
 			Status: rpc.StatusInternal(err.Error()),
 		}, nil
 	}
+	s.updatePostInRedis(ctx, resp)
 	return &userPb.GetPostResponse{
 		Status: rpc.StatusOk(),
 		Post: &userPb.Post{
@@ -84,11 +98,12 @@ func (s *Service) GetPost(ctx context.Context, req *userPb.GetPostRequest) (*use
 	}, nil
 }
 
-func NewService(dao dao.UserDao, txnManager txn.TransactionManager, postClient post.Client) *Service {
+func NewService(dao dao.UserDao, txnManager txn.TransactionManager, postClient post.Client, redisInMemoryStore store.InMemoryStore) *Service {
 	return &Service{
-		dao:        dao,
-		txnManager: txnManager,
-		postClient: postClient,
+		dao:                dao,
+		txnManager:         txnManager,
+		postClient:         postClient,
+		redisInMemoryStore: redisInMemoryStore,
 	}
 }
 
