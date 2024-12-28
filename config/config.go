@@ -55,6 +55,7 @@ type Config struct {
 	Server          *Server
 	ExternalService *ExternalService
 	PostgresConfig  *PostgresConfig
+	RedisConfig     *RedisConfig
 }
 
 type Server struct {
@@ -90,4 +91,11 @@ type PostgresConfig struct {
 	Password string
 	DBName   string
 	SSLMode  string
+}
+
+type RedisConfig struct {
+	Host     string
+	Port     int
+	User     string
+	Password string
 }

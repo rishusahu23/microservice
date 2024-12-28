@@ -9,6 +9,7 @@ import (
 	"github.com/rishu/microservice/config"
 	userPb "github.com/rishu/microservice/gen/api/user"
 	"github.com/rishu/microservice/pkg/db/mongo"
+	redis2 "github.com/rishu/microservice/pkg/in_memory_store/redis"
 	"github.com/rishu/microservice/user/wire"
 	"github.com/soheilhy/cmux"
 	"google.golang.org/grpc"
@@ -61,7 +62,8 @@ func startGrpcServer(ctx context.Context, lis net.Listener, conf *config.Config)
 
 	s := grpc.NewServer(opts...)
 	mongoClient := mongo.GetMongoClient(ctx, conf)
-	userPb.RegisterUserServiceServer(s, wire.InitialiseUserService(conf, mongoClient))
+	redisClient := redis2.GetRedisClient(conf)
+	userPb.RegisterUserServiceServer(s, wire.InitialiseUserService(conf, mongoClient, redisClient))
 
 	log.Printf("gRPC server running")
 	if err := s.Serve(lis); err != nil {

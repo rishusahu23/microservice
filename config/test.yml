@@ -24,3 +24,9 @@ PostgresConfig:
   User: "root"
   Password: "root"
   DBName: "test_database"
+
+RedisConfig:
+  Host: "localhost"
+  Port: 6379
+  User: "root"
+  Password: "root"

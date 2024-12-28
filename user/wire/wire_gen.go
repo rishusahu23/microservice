@@ -8,9 +8,11 @@ package wire
 
 import (
 	"crypto/tls"
+	"github.com/redis/go-redis/v9"
 	"github.com/rishu/microservice/config"
 	"github.com/rishu/microservice/external/ohttp"
 	"github.com/rishu/microservice/external/post"
+	redis2 "github.com/rishu/microservice/pkg/in_memory_store/redis"
 	mongo3 "github.com/rishu/microservice/pkg/transaction/mongo"
 	"github.com/rishu/microservice/user"
 	mongo2 "github.com/rishu/microservice/user/dao/mongo"
@@ -20,14 +22,15 @@ import (
 
 // Injectors from wire.go:
 
-func InitialiseUserService(conf *config.Config, mongoClient *mongo.Client) *user.Service {
+func InitialiseUserService(conf *config.Config, mongoClient *mongo.Client, redisClient *redis.Client) *user.Service {
 	userDaoMongo := mongo2.NewUserDaoMongo(mongoClient, conf)
 	mongoTransactionManager := mongo3.NewMongoTransactionManager(mongoClient)
 	client := getHttpClient()
 	httpRequestHandler := ohttp.NewHttpRequestHandler(client)
 	clientImpl := post.NewPostClientImpl(httpRequestHandler, conf)
 	postClient := GetPostClientProvider(clientImpl)
-	service := user.NewService(userDaoMongo, mongoTransactionManager, postClient)
+	redisInMemoryStore := redis2.NewRedisInMemoryStore(redisClient)
+	service := user.NewService(userDaoMongo, mongoTransactionManager, postClient, redisInMemoryStore)
 	return service
 }
 
