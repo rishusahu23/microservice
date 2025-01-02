@@ -2,12 +2,9 @@ package user
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
-	"github.com/rishu/microservice/external/enums"
 	"github.com/rishu/microservice/external/post"
-	"github.com/rishu/microservice/external/post/json_placeholder"
 	"github.com/rishu/microservice/gen/api/rpc"
 	userPb "github.com/rishu/microservice/gen/api/user"
 	customerrors "github.com/rishu/microservice/pkg/errors"
@@ -16,7 +13,6 @@ import (
 	"github.com/rishu/microservice/user/dao"
 	"github.com/rishu/microservice/user/dao/mongo"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
-	"time"
 )
 
 type Service struct {
@@ -67,34 +63,10 @@ func (s *Service) CreateUser(ctx context.Context, req *userPb.CreateUserRequest)
 	}, nil
 }
 
-func (s *Service) updatePostInRedis(ctx context.Context, resp *placeholder.FetchPostResponse) {
-	val, err := json.Marshal(resp)
-	if err != nil {
-		return
-	}
-	key := fmt.Sprintf("post_%v", resp.UserID)
-	_ = s.redisInMemoryStore.Set(ctx, key, string(val), 1*time.Hour)
-}
-
 func (s *Service) GetPost(ctx context.Context, req *userPb.GetPostRequest) (*userPb.GetPostResponse, error) {
-	resp, err := s.postClient.FetchPost(ctx, &placeholder.FetchPostRequest{
-		PostId: "1",
-		Vendor: enums.JsonPlaceholder,
-	})
-	if err != nil {
-		return &userPb.GetPostResponse{
-			Status: rpc.StatusInternal(err.Error()),
-		}, nil
-	}
-	s.updatePostInRedis(ctx, resp)
+
 	return &userPb.GetPostResponse{
 		Status: rpc.StatusOk(),
-		Post: &userPb.Post{
-			UserId: int32(resp.UserID),
-			Id:     int32(resp.ID),
-			Title:  resp.Title,
-			Body:   resp.Body,
-		},
 	}, nil
 }
 

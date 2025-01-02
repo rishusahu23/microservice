@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"fmt"
 	"github.com/rishu/microservice/config"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -23,5 +24,10 @@ func GetMongoClient(ctx context.Context, conf *config.Config) *mongo.Client {
 	if err != nil {
 		panic(err)
 	}
+	// Confirm connection by pinging MongoDB
+	if err = client.Ping(ctx, readPref); err != nil {
+		panic(fmt.Errorf("failed to ping MongoDB: %w", err))
+	}
+
 	return client
 }
