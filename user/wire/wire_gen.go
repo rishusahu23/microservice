@@ -10,12 +10,12 @@ import (
 	"crypto/tls"
 	"github.com/redis/go-redis/v9"
 	"github.com/rishu/microservice/config"
-	"github.com/rishu/microservice/external/ohttp"
 	"github.com/rishu/microservice/external/post"
 	redis2 "github.com/rishu/microservice/pkg/in_memory_store/redis"
 	mongo3 "github.com/rishu/microservice/pkg/transaction/mongo"
 	"github.com/rishu/microservice/user"
 	mongo2 "github.com/rishu/microservice/user/dao/mongo"
+	"github.com/rishu/microservice/user/getuserstrategy"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 )
@@ -25,12 +25,11 @@ import (
 func InitialiseUserService(conf *config.Config, mongoClient *mongo.Client, redisClient *redis.Client) *user.Service {
 	userDaoMongo := mongo2.NewUserDaoMongo(mongoClient, conf)
 	mongoTransactionManager := mongo3.NewMongoTransactionManager(mongoClient)
-	client := getHttpClient()
-	httpRequestHandler := ohttp.NewHttpRequestHandler(client)
-	clientImpl := post.NewPostClientImpl(httpRequestHandler, conf)
-	postClient := GetPostClientProvider(clientImpl)
+	db := strategy.NewDB(userDaoMongo)
 	redisInMemoryStore := redis2.NewRedisInMemoryStore(redisClient)
-	service := user.NewService(userDaoMongo, mongoTransactionManager, postClient, redisInMemoryStore)
+	cache := strategy.NewCache(redisInMemoryStore)
+	getUserStrategyFactoryImpl := strategy.NewGetUserStrategyFactoryImpl(db, cache)
+	service := user.NewService(userDaoMongo, mongoTransactionManager, getUserStrategyFactoryImpl)
 	return service
 }
 

@@ -8,12 +8,12 @@ import (
 	"github.com/google/wire"
 	redisV9 "github.com/redis/go-redis/v9"
 	"github.com/rishu/microservice/config"
-	"github.com/rishu/microservice/external/ohttp"
 	"github.com/rishu/microservice/external/post"
 	"github.com/rishu/microservice/pkg/in_memory_store/redis"
 	mongo2 "github.com/rishu/microservice/pkg/transaction/mongo"
 	"github.com/rishu/microservice/user"
 	mongoDao "github.com/rishu/microservice/user/dao/mongo"
+	strategy "github.com/rishu/microservice/user/getuserstrategy"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 )
@@ -35,10 +35,9 @@ func InitialiseUserService(conf *config.Config, mongoClient *mongo.Client, redis
 		user.NewService,
 		mongoDao.UserDaoWireSet,
 		mongo2.DefaultTxnManagerWireSet,
-		GetPostClientProvider,
-		post.NewPostClientImpl,
-		ohttp.NewHttpRequestHandler,
-		getHttpClient,
+		strategy.FactoryWireSet,
+		strategy.NewDB,
+		strategy.NewCache,
 		redis.RedisWireSet,
 	)
 	return &user.Service{}
